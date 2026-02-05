@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// USUARIOS
+// ═══════════════════════════════════════════════════════════
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(VENDEDOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  VENDEDOR
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENTES
+// ═══════════════════════════════════════════════════════════
+
+model Client {
+  id           String      @id @default(cuid())
+  name         String
+  type         ClientType  @default(MINORISTA)
+  dni          String?
+  phone        String
+  email        String?
+  address      String?
+  city         String      @default("Villa María")
+  province     String      @default("Córdoba")
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  documents    Document[]
+
+  @@map("clients")
+}
+
+enum ClientType {
+  MINORISTA   // Precio lista general
+  REVENDEDOR  // Precio especial
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRODUCTOS - CORTINAS (AHORA OPCIONAL)
+// ═══════════════════════════════════════════════════════════
+
+model FabricType {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  code            String   @unique
+  pricePerSqm     Decimal  @db.Decimal(12, 2)
+  resellerPrice   Decimal  @db.Decimal(12, 2)
+  description     String?
+  isActive        Boolean  @default(true)
+  
+  colors          FabricColor[]
+  documentItems   DocumentItem[]
+
+  @@map("fabric_types")
+}
+
+model FabricColor {
+  id           String     @id @default(cuid())
+  name         String
+  hexCode      String?
+  fabricType   FabricType @relation(fields: [fabricTypeId], references: [id])
+  fabricTypeId String
+  isActive     Boolean    @default(true)
+
+  documentItems DocumentItem[]
+
+  @@unique([fabricTypeId, name])
+  @@map("fabric_colors")
+}
+
+model SystemColor {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  hexCode   String?
+  isActive  Boolean @default(true)
+
+  documentItems DocumentItem[]
+
+  @@map("system_colors")
+}
+
+// ═══════════════════════════════════════════════════════════
+// DOCUMENTOS
+// ═══════════════════════════════════════════════════════════
+
+model Document {
+  id              String         @id @default(cuid())
+  number          Int            @default(autoincrement())
+  type            DocumentType
+  status          DocumentStatus @default(DRAFT)
+
+  // Relaciones
+  client          Client         @relation(fields: [clientId], references: [id])
+  clientId        String
+  createdBy       User           @relation(fields: [userId], references: [id])
+  userId          String
+
+  // Fechas
+  date            DateTime       @default(now())
+  validUntil      DateTime?
+  estimatedDate   DateTime?
+
+  // Items
+  items           DocumentItem[]
+
+  // Totales
+  subtotal        Decimal        @db.Decimal(12, 2)
+  surcharge       Decimal        @default(0) @db.Decimal(12, 2)
+  surchargeRate   Int            @default(0)
+  discount        Decimal        @default(0) @db.Decimal(12, 2)
+  discountRate    Int            @default(0)
+  total           Decimal        @db.Decimal(12, 2)
+
+  // Pago
+  paymentMethod   PaymentMethod?
+  amountPaid      Decimal?       @db.Decimal(12, 2)
+  balance         Decimal?       @db.Decimal(12, 2)
+
+  // Envío
+  shippingType    String         @default("Envío gratis")
+  shippingAddress String?
+  shippingCity    String?
+  shippingCost    Decimal        @default(0) @db.Decimal(12, 2)
+
+  // Metadata
+  observations    String?
+  internalNotes   String?
+
+  // Producción
+  productionStatus ProductionStatus @default(PENDING)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("documents")
+}
+
+model DocumentItem {
+  id             String        @id @default(cuid())
+  document       Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId     String
+
+  // MODO SIMPLIFICADO - nombre libre del producto
+  productName    String        // "Cortina Roller Blackout", "Cortina Sunscreen", etc.
+  
+  // Catálogo opcional (para compatibilidad)
+  fabricType     FabricType?   @relation(fields: [fabricTypeId], references: [id])
+  fabricTypeId   String?
+
+  fabricColor    FabricColor?  @relation(fields: [fabricColorId], references: [id])
+  fabricColorId  String?
+
+  systemColor    SystemColor?  @relation(fields: [systemColorId], references: [id])
+  systemColorId  String?
+
+  // Medidas - guardamos en CM pero permitimos entrada en metros
+  width          Int           // Ancho en cm
+  height         Int           // Alto en cm
+
+  // Precios y cálculos
+  pricePerSqm    Decimal       @db.Decimal(12, 2)
+  squareMeters   Decimal       @db.Decimal(10, 4)
+  quantity       Int           @default(1)
+  unitPrice      Decimal       @db.Decimal(12, 2)
+  subtotal       Decimal       @db.Decimal(12, 2)
+
+  // Ubicación (opcional)
+  location       String?
+
+  // Estado de producción
+  status         ItemStatus    @default(PENDING)
+
+  @@map("document_items")
+}
+
+enum DocumentType {
+  PRESUPUESTO
+  RECIBO
+  REMITO
+}
+
+enum DocumentStatus {
+  DRAFT
+  SENT
+  APPROVED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  CONTADO
+  CUOTAS_3
+  CUOTAS_6
+  CUOTAS_12
+}
+
+enum ProductionStatus {
+  PENDING
+  IN_PRODUCTION
+  READY
+  DELIVERED
+}
+
+enum ItemStatus {
+  PENDING
+  CUTTING
+  ASSEMBLING
+  READY
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// ═══════════════════════════════════════════════════════════
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+
+  @@map("settings")
+}
