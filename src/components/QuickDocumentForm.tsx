@@ -28,6 +28,9 @@ interface Item {
   location?: string
 }
 
+// Función helper para generar IDs únicos
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+
 export default function QuickDocumentForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -41,7 +44,7 @@ export default function QuickDocumentForm() {
   
   // Items
   const [items, setItems] = useState<Item[]>([{
-    id: crypto.randomUUID(),
+    id: generateId(),
     productName: "",
     width: "",
     height: "",
@@ -59,7 +62,7 @@ export default function QuickDocumentForm() {
 
   const addItem = () => {
     setItems([...items, {
-      id: crypto.randomUUID(),
+      id: generateId(),
       productName: "",
       width: "",
       height: "",
