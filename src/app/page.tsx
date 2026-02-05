@@ -2,12 +2,14 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import {
-  DollarSign,
   FileText,
   Package,
   TrendingUp,
   Users,
+  Plus,
 } from "lucide-react"
 
 async function getDashboardData() {
@@ -114,27 +116,36 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Resumen general de Azul Deco - Fábrica de Cortinas Roller
-        </p>
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            Resumen general de Azul Deco - Fábrica de Cortinas Roller
+          </p>
+        </div>
+        <Button asChild className="w-full sm:w-auto">
+          <Link href="/documentos/nuevo">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Documento
+          </Link>
+        </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.title}>
+          <Card key={stat.title} className="overflow-hidden hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <div className={`rounded-full p-2 ${stat.bgColor}`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <div className={`rounded-full p-2.5 ${stat.bgColor}`}>
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl sm:text-3xl font-bold">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
@@ -142,47 +153,117 @@ export default async function DashboardPage() {
 
       {/* Documentos Recientes */}
       <Card>
-        <CardHeader>
-          <CardTitle>Documentos Recientes</CardTitle>
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-xl">Documentos Recientes</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Últimos {data.recentDocuments.length} documentos creados
+            </p>
+          </div>
+          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+            <Link href="/documentos">Ver todos</Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {data.recentDocuments.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getStatusBadge(doc.status)}>
-                      {getDocumentTypeBadge(doc.type)} #{doc.number}
-                    </Badge>
-                    <span className="text-sm font-medium">
-                      {doc.client.name}
-                    </span>
+          {data.recentDocuments.length > 0 ? (
+            <div className="space-y-4">
+              {data.recentDocuments.map((doc) => (
+                <Link
+                  key={doc.id}
+                  href={`/documentos/${doc.id}`}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <div className="space-y-2 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={getStatusBadge(doc.status)} className="text-xs">
+                        {getDocumentTypeBadge(doc.type)} #{doc.number}
+                      </Badge>
+                      <span className="text-sm font-medium truncate">
+                        {doc.client.name}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(doc.createdAt)}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(doc.createdAt)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    {formatCurrency(Number(doc.total))}
-                  </p>
-                  <Badge variant="outline" className="mt-1">
-                    {doc.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-            {data.recentDocuments.length === 0 && (
-              <p className="text-center text-sm text-muted-foreground py-8">
+                  <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
+                    <p className="text-lg sm:text-xl font-bold">
+                      {formatCurrency(Number(doc.total))}
+                    </p>
+                    <Badge variant="outline" className="text-xs">
+                      {doc.status}
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground mb-4">
                 No hay documentos recientes
               </p>
-            )}
-          </div>
+              <Button asChild>
+                <Link href="/documentos/nuevo">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear primer documento
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Quick Actions */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <Link href="/clientes/nuevo" className="block">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-5 w-5 text-blue-600" />
+                Nuevo Cliente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Registra un nuevo cliente en el sistema
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <Link href="/documentos/nuevo" className="block">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-5 w-5 text-purple-600" />
+                Nuevo Presupuesto
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Crea un presupuesto o recibo rápidamente
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <Link href="/produccion" className="block">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Package className="h-5 w-5 text-orange-600" />
+                Ver Producción
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Gestiona los pedidos en producción
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -67,3 +67,24 @@
     @apply bg-background text-foreground;
   }
 }
+/* Mobile optimizations */
+@layer utilities {
+  .container {
+    @apply w-full;
+  }
+  
+  /* Prevent horizontal scroll on mobile */
+  body {
+    @apply overflow-x-hidden;
+  }
+  
+  /* Safe area for mobile devices */
+  @supports (padding: max(0px)) {
+    .safe-top {
+      padding-top: max(1rem, env(safe-area-inset-top));
+    }
+    .safe-bottom {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+  }
+}
